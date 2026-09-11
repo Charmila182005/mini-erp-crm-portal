@@ -65,3 +65,17 @@ export const confirmChallan = async (
 
     return response.data;
 };
+
+export const cancelChallan = async (
+    id: string
+) => {
+    const response =
+        await apiRequest<ApiResponse<any>>(
+            `/challans/${id}/cancel`,
+            {
+                method: 'POST',
+            }
+        );
+
+    return response.data;
+};

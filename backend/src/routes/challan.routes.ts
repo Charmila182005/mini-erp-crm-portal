@@ -4,6 +4,7 @@ import {
     getChallanController,
     createChallanController,
     confirmChallanController,
+    cancelChallanController,
 } from '../controllers/challan.controller';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
@@ -50,6 +51,17 @@ router.post(
     authenticateToken,
     requireRole('ADMIN', 'WAREHOUSE'),
     confirmChallanController
+);
+
+/**
+ * Cancel Draft challan
+ * ADMIN and SALES can cancel.
+ */
+router.post(
+    '/:id/cancel',
+    authenticateToken,
+    requireRole('ADMIN', 'SALES'),
+    cancelChallanController
 );
 
 export default router;

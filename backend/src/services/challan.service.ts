@@ -425,3 +425,75 @@ export const confirmChallan = async (
         client.release();
     }
 };
+/**
+ * Cancel a Draft challan.
+ *
+ * Business rule:
+ * - Only Draft challans can be cancelled.
+ * - No stock is changed because Draft challans have not reduced stock.
+ */
+export const cancelChallan = async (
+    challanId: string,
+    cancelledBy: string
+) => {
+    const client = await getClient();
+
+    try {
+        await client.query('BEGIN');
+
+        const challanResult = await client.query(
+            `
+            SELECT
+                id,
+                challan_number,
+                status,
+                created_by
+            FROM challans
+            WHERE id = $1
+            FOR UPDATE
+            `,
+            [challanId]
+        );
+
+        if (challanResult.rows.length === 0) {
+            throw new Error('Challan not found');
+        }
+
+        const challan = challanResult.rows[0];
+
+        if (challan.status !== 'Draft') {
+            throw new Error(
+                `Only Draft challans can be cancelled. Current status: ${challan.status}`
+            );
+        }
+
+        const cancelledResult = await client.query(
+            `
+            UPDATE challans
+            SET
+                status = 'Cancelled',
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING
+                id,
+                challan_number,
+                customer_id,
+                total_quantity,
+                status,
+                created_by,
+                created_at,
+                updated_at
+            `,
+            [challanId]
+        );
+
+        await client.query('COMMIT');
+
+        return getChallanById(cancelledResult.rows[0].id);
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
+};

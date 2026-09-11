@@ -10,6 +10,7 @@ import {
     createChallan,
     getChallans,
     confirmChallan,
+    cancelChallan,
 } from '../services/challan.service';
 
 import { getCustomers } from '../services/customer.service';
@@ -97,6 +98,24 @@ const SalesChallans = () => {
 
     const [showDetails, setShowDetails] =
         useState(false);
+
+    // Search and filter
+    const [searchTerm, setSearchTerm] =
+        useState('');
+
+    const [statusFilter, setStatusFilter] =
+        useState<
+            'All' |
+            'Draft' |
+            'Confirmed' |
+            'Cancelled'
+        >('All');
+
+    // Pagination
+    const [currentPage, setCurrentPage] =
+        useState(1);
+
+    const itemsPerPage = 5;
 
     const canCreate =
         user?.role === 'ADMIN' ||
@@ -291,6 +310,8 @@ const SalesChallans = () => {
             closeForm();
 
             await loadData();
+
+            setCurrentPage(1);
         } catch (err) {
             setError(
                 err instanceof Error
@@ -331,6 +352,35 @@ const SalesChallans = () => {
         }
     };
 
+    const handleCancel = async (
+        challan: Challan
+    ) => {
+        const confirmed =
+            window.confirm(
+                `Cancel challan ${challan.challan_number}?`
+            );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            setError('');
+
+            await cancelChallan(
+                challan.id
+            );
+
+            await loadData();
+        } catch (err) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : 'Failed to cancel challan'
+            );
+        }
+    };
+
     const viewDetails = (
         challan: Challan
     ) => {
@@ -338,9 +388,91 @@ const SalesChallans = () => {
         setShowDetails(true);
     };
 
+    /*
+     * FILTERING
+     */
+    const filteredChallans =
+        challans.filter((challan) => {
+            const search =
+                searchTerm
+                    .toLowerCase()
+                    .trim();
+
+            const matchesSearch =
+                !search ||
+                challan.challan_number
+                    .toLowerCase()
+                    .includes(search) ||
+                (
+                    challan.customer_name ||
+                    ''
+                )
+                    .toLowerCase()
+                    .includes(search);
+
+            const matchesStatus =
+                statusFilter === 'All' ||
+                challan.status ===
+                statusFilter;
+
+            return (
+                matchesSearch &&
+                matchesStatus
+            );
+        });
+
+    /*
+     * PAGINATION
+     */
+    const totalPages = Math.max(
+        1,
+        Math.ceil(
+            filteredChallans.length /
+            itemsPerPage
+        )
+    );
+
+    const safeCurrentPage =
+        Math.min(
+            currentPage,
+            totalPages
+        );
+
+    const startIndex =
+        (safeCurrentPage - 1) *
+        itemsPerPage;
+
+    const paginatedChallans =
+        filteredChallans.slice(
+            startIndex,
+            startIndex + itemsPerPage
+        );
+
+    const handleSearchChange = (
+        value: string
+    ) => {
+        setSearchTerm(value);
+        setCurrentPage(1);
+    };
+
+    const handleStatusChange = (
+        value: string
+    ) => {
+        setStatusFilter(
+            value as
+            | 'All'
+            | 'Draft'
+            | 'Confirmed'
+            | 'Cancelled'
+        );
+
+        setCurrentPage(1);
+    };
+
     return (
         <div className="module-page">
 
+            {/* HEADER */}
             <div className="module-header">
 
                 <div>
@@ -367,6 +499,7 @@ const SalesChallans = () => {
 
             </div>
 
+            {/* ERROR */}
             {error && (
                 <div className="module-error">
                     {error}
@@ -375,14 +508,115 @@ const SalesChallans = () => {
 
             <div className="data-card">
 
+                {/* SEARCH + FILTER */}
+                {!isLoading &&
+                    challans.length > 0 && (
+                        <div
+                            style={{
+                                display: 'flex',
+                                gap: '12px',
+                                marginBottom:
+                                    '16px',
+                                flexWrap:
+                                    'wrap',
+                                alignItems:
+                                    'center',
+                            }}
+                        >
+
+                            <input
+                                type="text"
+                                placeholder="Search challan or customer..."
+                                value={
+                                    searchTerm
+                                }
+                                onChange={(
+                                    event
+                                ) =>
+                                    handleSearchChange(
+                                        event
+                                            .target
+                                            .value
+                                    )
+                                }
+                                style={{
+                                    padding:
+                                        '10px 12px',
+                                    border:
+                                        '1px solid #d1d5db',
+                                    borderRadius:
+                                        '6px',
+                                    minWidth:
+                                        '250px',
+                                }}
+                            />
+
+                            <select
+                                value={
+                                    statusFilter
+                                }
+                                onChange={(
+                                    event
+                                ) =>
+                                    handleStatusChange(
+                                        event
+                                            .target
+                                            .value
+                                    )
+                                }
+                                style={{
+                                    padding:
+                                        '10px 12px',
+                                    border:
+                                        '1px solid #d1d5db',
+                                    borderRadius:
+                                        '6px',
+                                }}
+                            >
+                                <option value="All">
+                                    All Statuses
+                                </option>
+
+                                <option value="Draft">
+                                    Draft
+                                </option>
+
+                                <option value="Confirmed">
+                                    Confirmed
+                                </option>
+
+                                <option value="Cancelled">
+                                    Cancelled
+                                </option>
+                            </select>
+
+                            <span
+                                style={{
+                                    fontSize:
+                                        '13px',
+                                    color:
+                                        '#6b7280',
+                                }}
+                            >
+                                {filteredChallans.length}{' '}
+                                challan
+                                {filteredChallans.length !==
+                                    1
+                                    ? 's'
+                                    : ''}{' '}
+                                found
+                            </span>
+
+                        </div>
+                    )}
+
                 {isLoading ? (
 
                     <div className="table-state">
                         Loading challans...
                     </div>
 
-                ) : challans.length ===
-                    0 ? (
+                ) : challans.length === 0 ? (
 
                     <div className="table-state">
                         <span>🧾</span>
@@ -397,6 +631,23 @@ const SalesChallans = () => {
                         </p>
                     </div>
 
+                ) : filteredChallans.length ===
+                    0 ? (
+
+                    <div className="table-state">
+                        <span>🔍</span>
+
+                        <strong>
+                            No matching challans
+                        </strong>
+
+                        <p>
+                            Try changing your
+                            search or status
+                            filter.
+                        </p>
+                    </div>
+
                 ) : (
 
                     <div className="table-wrapper">
@@ -405,6 +656,7 @@ const SalesChallans = () => {
 
                             <thead>
                                 <tr>
+
                                     <th>
                                         Challan No.
                                     </th>
@@ -428,13 +680,15 @@ const SalesChallans = () => {
                                     <th>
                                         Actions
                                     </th>
+
                                 </tr>
                             </thead>
 
                             <tbody>
 
-                                {challans.map(
+                                {paginatedChallans.map(
                                     (challan) => (
+
                                         <tr
                                             key={
                                                 challan.id
@@ -465,12 +719,12 @@ const SalesChallans = () => {
                                             <td>
                                                 <span
                                                     className={`status-badge ${challan.status ===
-                                                            'Confirmed'
-                                                            ? 'status-active'
-                                                            : challan.status ===
-                                                                'Cancelled'
-                                                                ? 'status-inactive'
-                                                                : 'type-badge'
+                                                        'Confirmed'
+                                                        ? 'status-active'
+                                                        : challan.status ===
+                                                            'Cancelled'
+                                                            ? 'status-inactive'
+                                                            : 'type-badge'
                                                         }`}
                                                 >
                                                     {
@@ -491,6 +745,7 @@ const SalesChallans = () => {
 
                                                 <div className="table-actions">
 
+                                                    {/* VIEW */}
                                                     <button
                                                         type="button"
                                                         className="icon-button"
@@ -504,6 +759,7 @@ const SalesChallans = () => {
                                                         👁️
                                                     </button>
 
+                                                    {/* CONFIRM */}
                                                     {canConfirm &&
                                                         challan.status ===
                                                         'Draft' && (
@@ -526,11 +782,35 @@ const SalesChallans = () => {
                                                             </button>
                                                         )}
 
+                                                    {/* CANCEL */}
+                                                    {canCreate &&
+                                                        challan.status ===
+                                                        'Draft' && (
+                                                            <button
+                                                                type="button"
+                                                                className="secondary-button"
+                                                                style={{
+                                                                    padding:
+                                                                        '7px 12px',
+                                                                    fontSize:
+                                                                        '12px',
+                                                                }}
+                                                                onClick={() =>
+                                                                    handleCancel(
+                                                                        challan
+                                                                    )
+                                                                }
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        )}
+
                                                 </div>
 
                                             </td>
 
                                         </tr>
+
                                     )
                                 )}
 
@@ -538,13 +818,92 @@ const SalesChallans = () => {
 
                         </table>
 
+                        {/* PAGINATION */}
+                        <div
+                            style={{
+                                display: 'flex',
+                                justifyContent:
+                                    'center',
+                                alignItems:
+                                    'center',
+                                gap: '16px',
+                                padding:
+                                    '16px',
+                                borderTop:
+                                    '1px solid #e5e7eb',
+                            }}
+                        >
+
+                            <button
+                                type="button"
+                                className="secondary-button"
+                                disabled={
+                                    safeCurrentPage ===
+                                    1
+                                }
+                                onClick={() =>
+                                    setCurrentPage(
+                                        (
+                                            previous
+                                        ) =>
+                                            Math.max(
+                                                1,
+                                                previous -
+                                                1
+                                            )
+                                    )
+                                }
+                            >
+                                Previous
+                            </button>
+
+                            <span
+                                style={{
+                                    fontSize:
+                                        '14px',
+                                    fontWeight:
+                                        500,
+                                }}
+                            >
+                                Page{' '}
+                                {
+                                    safeCurrentPage
+                                }{' '}
+                                of{' '}
+                                {totalPages}
+                            </span>
+
+                            <button
+                                type="button"
+                                className="secondary-button"
+                                disabled={
+                                    safeCurrentPage ===
+                                    totalPages
+                                }
+                                onClick={() =>
+                                    setCurrentPage(
+                                        (
+                                            previous
+                                        ) =>
+                                            Math.min(
+                                                totalPages,
+                                                previous +
+                                                1
+                                            )
+                                    )
+                                }
+                            >
+                                Next
+                            </button>
+
+                        </div>
+
                     </div>
                 )}
 
             </div>
 
             {/* CREATE CHALLAN */}
-
             {showForm && (
                 <div className="modal-overlay">
 
@@ -635,7 +994,9 @@ const SalesChallans = () => {
                                         </option>
 
                                         {customers.map(
-                                            (customer) => (
+                                            (
+                                                customer
+                                            ) => (
                                                 <option
                                                     key={
                                                         customer.id
@@ -647,6 +1008,7 @@ const SalesChallans = () => {
                                                     {
                                                         customer.customer_name
                                                     }
+
                                                     {customer.business_name
                                                         ? ` — ${customer.business_name}`
                                                         : ''}
@@ -670,11 +1032,16 @@ const SalesChallans = () => {
                             </h3>
 
                             {items.map(
-                                (item, index) => {
+                                (
+                                    item,
+                                    index
+                                ) => {
 
                                     const selectedProduct =
                                         products.find(
-                                            (product) =>
+                                            (
+                                                product
+                                            ) =>
                                                 product.id ===
                                                 item.product_id
                                         );
@@ -740,7 +1107,8 @@ const SalesChallans = () => {
                                                             (Stock:{' '}
                                                             {
                                                                 product.current_stock
-                                                            })
+                                                            }
+                                                            )
                                                         </option>
                                                     )
                                                 )}
@@ -801,8 +1169,10 @@ const SalesChallans = () => {
                                                         }}
                                                     >
                                                         ⚠️ Requested
-                                                        quantity exceeds
-                                                        current stock.
+                                                        quantity
+                                                        exceeds
+                                                        current
+                                                        stock.
                                                     </div>
                                                 )}
 
@@ -855,7 +1225,6 @@ const SalesChallans = () => {
             )}
 
             {/* DETAILS */}
-
             {showDetails &&
                 selectedChallan && (
                     <div className="modal-overlay">
@@ -937,20 +1306,26 @@ const SalesChallans = () => {
                                                     '20px',
                                             }}
                                         >
+
                                             <thead>
                                                 <tr>
+
                                                     <th>
                                                         Product
                                                     </th>
+
                                                     <th>
                                                         SKU
                                                     </th>
+
                                                     <th>
                                                         Qty
                                                     </th>
+
                                                     <th>
                                                         Price
                                                     </th>
+
                                                 </tr>
                                             </thead>
 
@@ -967,6 +1342,7 @@ const SalesChallans = () => {
                                                                 index
                                                             }
                                                         >
+
                                                             <td>
                                                                 {
                                                                     item.product_name
@@ -993,11 +1369,13 @@ const SalesChallans = () => {
                                                                     'en-IN'
                                                                 )}
                                                             </td>
+
                                                         </tr>
                                                     )
                                                 )}
 
                                             </tbody>
+
                                         </table>
                                     )}
 

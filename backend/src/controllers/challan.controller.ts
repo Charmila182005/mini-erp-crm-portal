@@ -5,6 +5,7 @@ import {
     getChallanById,
     createChallan,
     confirmChallan,
+    cancelChallan,
 } from '../services/challan.service';
 
 const validateCreateChallanInput = (
@@ -77,6 +78,9 @@ const validateCreateChallanInput = (
 
 /**
  * GET /api/challans
+ *
+ * View all challans.
+ * All authenticated roles can view.
  */
 export const getChallansController = async (
     _req: Request,
@@ -104,6 +108,9 @@ export const getChallansController = async (
 
 /**
  * GET /api/challans/:id
+ *
+ * View a single challan.
+ * All authenticated roles can view.
  */
 export const getChallanController = async (
     req: Request,
@@ -152,6 +159,8 @@ export const getChallanController = async (
  *
  * Creates a Draft challan.
  * Stock is NOT changed.
+ *
+ * ADMIN and SALES only.
  */
 export const createChallanController = async (
     req: AuthenticatedRequest,
@@ -253,7 +262,10 @@ export const createChallanController = async (
 /**
  * POST /api/challans/:id/confirm
  *
- * Confirms a Draft challan and atomically reduces stock.
+ * Confirms a Draft challan.
+ * Stock is atomically reduced.
+ *
+ * ADMIN and WAREHOUSE only.
  */
 export const confirmChallanController = async (
     req: AuthenticatedRequest,
@@ -349,6 +361,85 @@ export const confirmChallanController = async (
         res.status(500).json({
             success: false,
             message: 'Failed to confirm challan',
+        });
+    }
+};
+
+/**
+ * POST /api/challans/:id/cancel
+ *
+ * Cancels a Draft challan.
+ * Stock is NOT changed.
+ *
+ * ADMIN and SALES only.
+ */
+export const cancelChallanController = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    try {
+        if (!req.user) {
+            res.status(401).json({
+                success: false,
+                message: 'Authentication required',
+            });
+            return;
+        }
+
+        const { id } = req.params;
+
+        if (!id) {
+            res.status(400).json({
+                success: false,
+                message: 'Challan ID is required',
+            });
+            return;
+        }
+
+        const challan = await cancelChallan(
+            id,
+            req.user.id
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Challan cancelled successfully',
+            data: challan,
+        });
+    } catch (error) {
+        const message =
+            error instanceof Error
+                ? error.message
+                : 'Failed to cancel challan';
+
+        if (message === 'Challan not found') {
+            res.status(404).json({
+                success: false,
+                message,
+            });
+            return;
+        }
+
+        if (
+            message.startsWith(
+                'Only Draft challans can be cancelled'
+            )
+        ) {
+            res.status(409).json({
+                success: false,
+                message,
+            });
+            return;
+        }
+
+        console.error(
+            '[Challan Controller] Cancel challan:',
+            error
+        );
+
+        res.status(500).json({
+            success: false,
+            message: 'Failed to cancel challan',
         });
     }
 };
