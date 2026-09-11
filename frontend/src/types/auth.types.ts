@@ -1,0 +1,25 @@
+export type UserRole =
+    | 'ADMIN'
+    | 'SALES'
+    | 'WAREHOUSE'
+    | 'ACCOUNTS';
+
+export interface AuthUser {
+    id: string;
+    email: string;
+    role: UserRole;
+}
+
+export interface LoginRequest {
+    email: string;
+    password: string;
+}
+
+export interface LoginResponse {
+    success: boolean;
+    message?: string;
+    data: {
+        token: string;
+        user: AuthUser;
+    };
+}
