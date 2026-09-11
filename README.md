@@ -1,161 +1,148 @@
 # Mini ERP + CRM Operations Portal
 
-## Project Overview
+A full-stack Mini ERP + CRM Operations Portal for wholesale and distribution businesses.
 
-A full-stack Mini ERP + CRM Operations Portal designed for wholesale/distribution companies. The system enables internal employees (Admin, Sales, Warehouse, Accounts) to manage customers, products, inventory, stock movements, sales challans, and CRM follow-ups — all within a single, role-based web application.
+The application provides role-based management of customers, CRM follow-ups, products, inventory, stock movements, and sales challans through a single web portal.
 
-> **Status:** Phase 1 — Project Initialization (Scaffold Only)
+## Project Status
+
+**Status: Completed – Technical Case Study Implementation**
+
+The core ERP + CRM workflow has been implemented and tested locally.
+
+---
+
+## Key Features
+
+### Authentication & Role-Based Access
+
+The system supports four employee roles:
+
+- Admin
+- Sales
+- Warehouse
+- Accounts
+
+Authentication is implemented using JWT.
+
+Role-based authorization controls access to protected operations.
+
+### CRM / Customer Management
+
+- Add customers
+- Edit customers
+- Search customers
+- View customer details
+- Customer types:
+  - Retail
+  - Wholesale
+  - Distributor
+- Customer status:
+  - Lead
+  - Active
+  - Inactive
+- Follow-up date
+- CRM notes
+- Add, edit and delete customer follow-ups
+
+### Product & Inventory Management
+
+- Add products
+- Edit products
+- Delete products
+- Product SKU
+- Product category
+- Unit price
+- Current stock
+- Minimum stock quantity
+- Warehouse/location information
+- Low-stock indication
+
+### Stock Movements
+
+The system maintains stock movement history for:
+
+- Stock IN
+- Stock OUT
+- Quantity changed
+- Reason
+- User who performed the movement
+- Timestamp
+
+Stock cannot become negative.
+
+If an OUT movement exceeds the available stock, the API returns an insufficient-stock error.
+
+### Sales Challans
+
+- Create sales challan
+- Automatic challan number
+- Select customer
+- Add multiple products
+- Specify quantities
+- Draft status
+- Confirmed status
+- View challan details
+
+Business rules:
+
+- Creating a draft does not reduce stock.
+- Confirming a challan reduces stock.
+- Insufficient stock prevents confirmation.
+- Stock changes are performed transactionally.
+- Challan items store product snapshot information such as product name, SKU and unit price.
 
 ---
 
 ## Technology Stack
 
 ### Frontend
+
 | Technology | Purpose |
 |---|---|
-| React 18 | UI framework |
+| React | UI framework |
 | TypeScript | Type safety |
-| Vite | Build tool & dev server |
-| CSS | Styling (responsive layout) |
+| Vite | Build tool |
+| CSS | Responsive UI |
 
 ### Backend
+
 | Technology | Purpose |
 |---|---|
 | Node.js | Runtime |
 | TypeScript | Type safety |
 | Express.js | REST API framework |
-| ts-node / nodemon | Dev server with hot reload |
+| JWT | Authentication |
+| CORS | Cross-origin API access |
+| Helmet | Security headers |
+| Morgan | HTTP request logging |
 
 ### Database
+
 | Technology | Purpose |
 |---|---|
-| PostgreSQL | Primary relational database |
-
-### Authentication
-| Technology | Purpose |
-|---|---|
-| JWT | Stateless token-based auth |
-| Role-based access | Admin / Sales / Warehouse / Accounts roles |
+| PostgreSQL | Relational database |
+| Neon | Cloud PostgreSQL database |
 
 ---
 
-## Planned Architecture
+## Architecture
 
-```
-React Frontend  (Vite, TypeScript)
-       │
-       │  HTTP / REST
-       ▼
-Express Backend  (Node.js, TypeScript)
-       │
-       │  Business Logic / Services / Repositories
-       ▼
-PostgreSQL Database
-```
-
-See [`docs/architecture.md`](./docs/architecture.md) for a detailed architecture breakdown.
-
----
-
-## Planned Modules
-
-| Module | Description |
-|---|---|
-| Auth | JWT login / logout, role-based access |
-| Dashboard | Summary stats per role |
-| Customers | Customer master data + CRM |
-| Products | Product catalogue |
-| Inventory | Current stock levels |
-| Stock Movements | Inbound / outbound stock records |
-| Sales Challans | Delivery challan generation |
-| CRM Follow-ups | Sales team follow-up tracking |
-| Reports | Basic operational reports |
-
----
-
-## Monorepo Structure
-
-```
-mini-erp-crm-portal/
-├── frontend/          # React + TypeScript (Vite)
-├── backend/           # Node.js + TypeScript + Express
-├── database/          # SQL migrations & schema scripts
-├── postman/           # API collection files
-├── docs/              # Architecture & technical docs
-├── .gitignore
-└── README.md
-```
-
----
-
-## Local Development Prerequisites
-
-| Prerequisite | Minimum Version |
-|---|---|
-| Node.js | 18.x or higher |
-| npm | 9.x or higher |
-| PostgreSQL | 14.x or higher |
-| Git | 2.x or higher |
-
----
-
-## Getting Started
-
-### 1. Clone the repository
-
-```bash
-git clone <repo-url>
-cd mini-erp-crm-portal
-```
-
-### 2. Setup Backend
-
-```bash
-cd backend
-cp .env.example .env
-# Fill in values in .env
-npm install
-npm run dev
-```
-
-Backend runs at: `http://localhost:3000`  
-Health check: `GET http://localhost:3000/api/health`
-
-### 3. Setup Frontend
-
-```bash
-cd frontend
-cp .env.example .env
-# Set VITE_API_URL=http://localhost:3000
-npm install
-npm run dev
-```
-
-Frontend runs at: `http://localhost:5173`
-
----
-
-## Available Scripts
-
-### Backend (`cd backend`)
-
-| Command | Description |
-|---|---|
-| `npm run dev` | Start dev server with hot reload |
-| `npm run build` | Compile TypeScript to JavaScript |
-| `npm start` | Run compiled production build |
-| `npm run lint` | Run ESLint |
-
-### Frontend (`cd frontend`)
-
-| Command | Description |
-|---|---|
-| `npm run dev` | Start Vite dev server |
-| `npm run build` | Build for production |
-| `npm run preview` | Preview production build |
-
----
-
-## License
-
-Internal use only — Technical Case Study Project.
+```text
+                 React + TypeScript
+                       │
+                       │ REST API / JSON
+                       ▼
+              Node.js + Express
+                       │
+              ┌────────┴────────┐
+              │                 │
+        JWT Authentication   Role Authorization
+              │                 │
+              └────────┬────────┘
+                       ▼
+                Business Services
+                       │
+                       ▼
+                 PostgreSQL
+                    (Neon)
